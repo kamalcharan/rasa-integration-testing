@@ -1,0 +1,4 @@
+- user: initial_parameters
+  bot: welcome
+- user: goodbye
+  bot: thank_you

@@ -1,0 +1,24 @@
+{
+    "type": "interaction",
+    "messages": [
+        {
+            "synthesis": "Welcome to NuBank!",
+            "language": "",
+            "bargein": true,
+            "id": "welcome.initial",
+            "audio": "http://localhost:5555/audios/welcome/initial.wav"
+        }
+    ],
+    "noinputTimeout": "30s",
+    "speech": {
+        "grammars": [
+            {
+                "url": "http://localhost:5555/grammars/welcome.grxml?SWI.appsessionid=${SENDER_ID}&SWI.appstepid=${STEP_ID}"
+            }
+        ],
+        "confidenceLevel": 0.5,
+        "maxSpeechTimeout": "60s",
+        "incompleteTimeout": "2s",
+        "maxNBest": 10
+    }
+}

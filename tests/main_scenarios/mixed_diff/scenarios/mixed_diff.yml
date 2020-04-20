@@ -1,0 +1,4 @@
+- user: initial_valid
+  bot: welcome
+- user: no_input
+  bot: no_input_1

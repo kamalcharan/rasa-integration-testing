@@ -1,0 +1,4 @@
+- input: initial_parameters
+  output: welcome
+- input: goodbye
+  output: thank_you

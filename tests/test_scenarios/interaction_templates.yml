@@ -1,0 +1,12 @@
+- user:
+    template: welcome_template
+    variables:
+      title: Mister
+      name: John
+  bot: welcome
+- user: goodbye
+  bot:
+    template: goodbye_template
+    variables:
+      title: Mister
+      name: John

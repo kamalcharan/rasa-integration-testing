@@ -4,7 +4,6 @@ from typing import Dict, List, Union
 
 from ruamel.yaml import YAML
 
-from .configuration import configure
 from .interaction import Interaction, InteractionTurn
 from .logging_provider import get_logger
 
@@ -71,13 +70,11 @@ class Scenario:
         return f"Scenario '{self.name}': steps={self.steps}"
 
 
-@configure("runner.test_definitions_path")
 class ScenarioFragmentLoader:
-    def __init__(self, test_definitions_path: str):
-        self._scenario_fragments_path = Path(test_definitions_path).joinpath(
+    def __init__(self, test_definitions_path: Path):
+        self._scenario_fragments_path = test_definitions_path.joinpath(
             SCENARIO_FRAGMENTS_FOLDER
         )
-
         self._scenario_fragments = self._load_scenario_fragments()
 
     def scenario_fragment(self, scenario_fragment_name: str) -> List[Interaction]:

@@ -1,11 +1,11 @@
 Running scenario 'mixed_diff'...
 --- Scenario 'mixed_diff' failed the following interaction.
 User sent:
-{<Key.SENDER: 'senderId'>: 'ITEST_clichy23135_1582144933.558128_mixed_diff', 'type': 'interaction', 'messages': [{'synthesis': 'No Input 2!', 'language': '', 'bargein': False, 'id': 'welcome.no_input', 'audio': 'http://localhost:5555/audios/welcome/no_input_2.wav'}]}
+{<Key.SENDER: 'sender'>: 'ITEST_clichy23135_1582144933.558128_mixed_diff', 'type': 'interaction', 'messages': [{'synthesis': 'No Input 2!', 'language': '', 'bargein': False, 'id': 'welcome.no_input', 'audio': 'http://localhost:5555/audios/welcome/no_input_2.wav'}]}
 Expected output:
 {'type': 'interaction', 'messages': [{'synthesis': 'No Input 1!', 'bargein': True, 'id': 'welcome.no_input', 'audio': 'http://localhost:5555audios/welcome/no_input_1.wav'}]}
 Actual output:
-{<Key.SENDER: 'senderId'>: 'ITEST_clichy23135_1582144933.558128_mixed_diff', 'type': 'interaction', 'messages': [{'synthesis': 'No Input 2!', 'language': '', 'bargein': False, 'id': 'welcome.no_input', 'audio': 'http://localhost:5555/audios/welcome/no_input_2.wav'}]}
+{<Key.SENDER: 'sender'>: 'ITEST_clichy23135_1582144933.558128_mixed_diff', 'type': 'interaction', 'messages': [{'synthesis': 'No Input 2!', 'language': '', 'bargein': False, 'id': 'welcome.no_input', 'audio': 'http://localhost:5555/audios/welcome/no_input_2.wav'}]}
 Bot output was different than expected:
  - messages._1.synthesis: No Input 1!
  + messages._1.synthesis: No Input 2!
@@ -13,5 +13,5 @@ Bot output was different than expected:
  + messages._1.bargein: False
  - messages._1.audio: http://localhost:5555audios/welcome/no_input_1.wav
  + messages._1.audio: http://localhost:5555/audios/welcome/no_input_2.wav
- + messages._1.language: 
+ + messages._1.language:
 ---

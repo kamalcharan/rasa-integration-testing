@@ -1,5 +1,5 @@
 from string import Template
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from .common import lazy_property
 from .configuration import configure
@@ -48,27 +48,29 @@ class JsonDataComparator:
         ) if ignored_result_keys else []
 
     def flatten_json(
-        self, nodes: dict, json_path: JsonPath = JsonPath(), variables={}
+        self,
+        node: Union[dict, list, str],
+        json_path: JsonPath = JsonPath(),
+        variables={},
     ) -> Dict[JsonPath, Any]:
         resolved_json_data: Dict[JsonPath, Any] = {}
 
-        for key, value in nodes.items():
-            node_id = JsonPath(*json_path, key)
-            if self._check_if_ignored(node_id):
-                continue
+        if self._check_if_ignored(json_path):
+            return resolved_json_data
 
-            if isinstance(value, dict):
-                resolved_json_data.update(self.flatten_json(value, node_id, variables))
-            elif isinstance(value, list):
-                for index, entry in enumerate(value, 1):
-                    entry_id = JsonPath(*node_id, f"{INDEX_KEY_PREFIX}{index}")
-                    resolved_json_data.update(
-                        self.flatten_json(entry, entry_id, variables)
-                    )
-            elif isinstance(value, str):
-                resolved_json_data[node_id] = Template(value).safe_substitute(variables)
-            else:
-                resolved_json_data[node_id] = value
+        if isinstance(node, dict):
+            for key, value in node.items():
+                resolved_json_data.update(
+                    self.flatten_json(value, JsonPath(*json_path, key), variables)
+                )
+        elif isinstance(node, list):
+            for index, entry in enumerate(node, 1):
+                entry_id = JsonPath(*json_path, f"{INDEX_KEY_PREFIX}{index}")
+                resolved_json_data.update(self.flatten_json(entry, entry_id, variables))
+        elif isinstance(node, str):
+            resolved_json_data[json_path] = Template(node).safe_substitute(variables)
+        else:
+            resolved_json_data[json_path] = node
 
         return resolved_json_data
 

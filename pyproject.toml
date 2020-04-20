@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "rasa_integration_testing"
+version = "0.1.0"
+description = ""
+authors = ["NuEcho <dev@nuecho.com>"]
+
+[tool.poetry.dependencies]
+aiohttp = "3.6.2"
+click = "7.1.1"
+coloredlogs = "14.0"
+jinja2 = "2.11.2"
+pydantic = "^1.4"
+python = "3.6.8"
+ruamel-yaml = "0.16.10"
+setuptools = "46.1.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "5.3.4"
+pytest-cov = "2.8.1"
+black = "19.10b0"
+flake8 = "3.7.9"
+isort = "^4.3.21"
+mypy = "0.770"
+pep8-naming = "0.10.0"
+pylama = "^7.7.1"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

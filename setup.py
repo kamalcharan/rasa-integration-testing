@@ -7,6 +7,6 @@ setup(
     author="nuecho",
     author_email="support@nuecho.com",
     url="https://www.nuecho.com",
-    packages=["rasa_integration_testing"],
+    packages=["integration_testing"],
     install_requires=[],
 )

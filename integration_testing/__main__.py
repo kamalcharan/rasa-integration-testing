@@ -16,10 +16,13 @@ from .cli import (
     echo,
 )
 from .common import quick_chunk
+from .comparator import JsonDataComparator
 from .configuration import Configuration, DependencyInjector
+from .interaction import InteractionLoader
 from .logging_provider import get_logger
+from .protocol import protocol_selector
 from .runner import FailedInteraction, ScenarioRunner
-from .scenario import Scenario, load_scenarios
+from .scenario import Scenario, ScenarioFragmentLoader, load_scenarios
 
 logger = get_logger(__name__)
 
@@ -28,17 +31,11 @@ SCENARIOS_GLOB = "*.yml"
 DEFAULT_ASYNC_CHUNK_SIZE = 16
 
 RUNNER_CONFIG_SECTION = "runner"
-TEST_DEFINITIONS_PATH_CONFIG_PROPERTY = "test_definitions_path"
+TEST_CONFIG_FILE = "config.ini"
 
 
 @click.command()
-@click.option(
-    "--config_file",
-    "-c",
-    required=True,
-    type=click.File("r"),
-    help="Configuration file location.",
-)
+@click.argument("tests_path", type=click.Path(exists=True))
 @click.option(
     "-k",
     "--chunk-size",
@@ -48,17 +45,20 @@ TEST_DEFINITIONS_PATH_CONFIG_PROPERTY = "test_definitions_path"
 )
 @click.option("-o", "--output", type=click.File("w"), default=sys.stdout)
 @click.argument("scenarios_glob", required=False, default=SCENARIOS_GLOB)
-def cli(config_file: TextIO, chunk_size: int, output: TextIO, scenarios_glob: str):
-    configuration = Configuration(config_file)
+def cli(tests_path: str, chunk_size: int, output: TextIO, scenarios_glob: str):
+    folder_path = Path(tests_path)
+    configuration = Configuration(folder_path.joinpath(TEST_CONFIG_FILE))
     injector = DependencyInjector(configuration)
-
-    test_definitions_path = configuration[RUNNER_CONFIG_SECTION][
-        TEST_DEFINITIONS_PATH_CONFIG_PROPERTY
-    ]
-    scenarios_path = Path(test_definitions_path).joinpath(SCENARIOS_FOLDER)
+    scenarios_path = folder_path.joinpath(SCENARIOS_FOLDER)
     scenarios: List[Scenario] = load_scenarios(scenarios_path, scenarios_glob)
 
-    runner: ScenarioRunner = injector.autowire(ScenarioRunner)
+    runner: ScenarioRunner = ScenarioRunner(
+        injector.autowire(protocol_selector),
+        InteractionLoader(folder_path),
+        ScenarioFragmentLoader(folder_path),
+        injector.autowire(JsonDataComparator),
+    )
+
     loop = asyncio.get_event_loop()
     failed_interactions: List[FailedInteraction] = loop.run_until_complete(
         _run_scenarios(runner, scenarios, chunk_size, output)

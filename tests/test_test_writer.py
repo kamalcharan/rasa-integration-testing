@@ -4,12 +4,8 @@ import tempfile
 from pathlib import Path
 from unittest import TestCase
 
-from rasa_integration_testing.scenario import (
-    Interaction,
-    InteractionTurn,
-    Scenario,
-)
-from rasa_integration_testing.test_writer import (
+from integration_testing.scenario import Interaction, InteractionTurn, Scenario
+from integration_testing.test_writer import (
     BOT,
     INTERACTION_EXTENSION,
     SCENARIO_FILENAME,

@@ -94,6 +94,6 @@ The `protocol` section has the following properties:
 
 Integration tests can be executed using the following command:
 
-`python -m rasa_integration_testing ...`
+`python -m integration_testing ...`
 
 The available options can be found using the `--help` option.

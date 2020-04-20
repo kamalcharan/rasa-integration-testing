@@ -5,11 +5,10 @@ from typing import Any, List, Optional
 from aiohttp import ClientSession
 
 from .comparator import JsonDataComparator, JsonDiff
-from .configuration import configure
 from .helper import generate_tracker_id_from_scenario_name
 from .interaction import Interaction, InteractionLoader
 from .logging_provider import get_logger
-from .protocol import Protocol, ProtocolException, protocol_selector
+from .protocol import Protocol, ProtocolException
 from .scenario import Scenario, ScenarioFragmentLoader, ScenarioFragmentReference
 
 logger = get_logger(__name__)
@@ -46,9 +45,6 @@ class FailedInteraction:
         )
 
 
-@configure(
-    protocol_selector, InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
-)
 class ScenarioRunner:
     def __init__(
         self,
@@ -90,7 +86,6 @@ class ScenarioRunner:
                 STEP_ID_ENV_VARIABLE: step_id,
             }
             substitutes.update(os.environ)
-
             expected_output = self._interaction_loader.render_bot_turn(interaction.bot)
             json_diff: JsonDiff = self._comparator.compare(
                 expected_output, actual_output, substitutes

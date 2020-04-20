@@ -47,6 +47,7 @@
 *.kt textfile
 *.launch textfile
 *.lexicon textfile
+*.lock textfile
 *.md textfile
 *.meta textfile
 *.MF textfile
@@ -74,6 +75,7 @@
 *.testset textfile
 *.tf textfile
 *.tmpl textfile
+*.toml textfile
 *.translationRules textfile
 *.txt textfile
 *.version textfile

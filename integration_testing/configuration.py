@@ -2,7 +2,8 @@ import os
 import re
 from configparser import ConfigParser
 from inspect import signature
-from typing import Any, Callable, Dict, TextIO, Type, TypeVar, Union
+from pathlib import Path
+from typing import Any, Callable, Dict, Type, TypeVar, Union
 
 CONFIGURE_OPTIONS_PATTERN = r"\s*(\w+)\.(\w+)\s*"
 SECTION_CAPTURE = 1
@@ -11,9 +12,10 @@ T = TypeVar("T")
 
 
 class Configuration(ConfigParser):
-    def __init__(self, configuration_input: TextIO):
+    def __init__(self, configuration_path: Path):
         super().__init__(os.environ)
-        self.read_file(configuration_input)
+        with open(configuration_path, "r") as file:
+            self.read_file(file)
 
 
 class Configured:

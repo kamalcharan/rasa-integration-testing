@@ -1,11 +1,11 @@
 Running scenario 'fail'...
 --- Scenario 'fail' failed the following interaction.
 User sent:
-{<Key.SENDER: 'senderId'>: 'ITEST_clichy21872_1582143673.9436011_fail'}
+{<Key.SENDER: 'sender'>: 'ITEST_clichy21872_1582143673.9436011_fail'}
 Expected output:
 {'messages': [{'synthesis': 'Welcome to NuBank!'}]}
 Actual output:
-{<Key.SENDER: 'senderId'>: 'ITEST_clichy21872_1582143673.9436011_fail'}
+{<Key.SENDER: 'sender'>: 'ITEST_clichy21872_1582143673.9436011_fail'}
 Bot output was different than expected:
  - messages._1.synthesis: Welcome to NuBank!
 ---

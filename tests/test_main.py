@@ -4,15 +4,15 @@ from unittest import TestCase
 
 from click.testing import CliRunner
 
-from rasa_integration_testing.__main__ import cli
-from rasa_integration_testing.cli import EXIT_FAILURE, EXIT_SUCCESS
+from integration_testing.__main__ import cli
+from integration_testing.cli import EXIT_FAILURE, EXIT_SUCCESS
 
-SENDER_ID_PATTERN = r"\{<Key.SENDER: 'senderId'>: '.*'\}"
+SENDER_ID_PATTERN = r"\{<Key.SENDER: 'sender'>: '.*'\}"
 
 CONFIGS_PATH = "tests/main_scenarios"
-SUCCESS_CONFIGURATION_PATH = f"{CONFIGS_PATH}/success_config.ini"
-FAILURE_CONFIGURATION_PATH = f"{CONFIGS_PATH}/failure_config.ini"
-MIXED_DIFF_CONFIGURATION_PATH = f"{CONFIGS_PATH}/mixed_diff_config.ini"
+SUCCESS_CONFIGURATION_PATH = f"{CONFIGS_PATH}/success"
+FAILURE_CONFIGURATION_PATH = f"{CONFIGS_PATH}/fail"
+MIXED_DIFF_CONFIGURATION_PATH = f"{CONFIGS_PATH}/mixed_diff"
 TEST_DATA_PATH = "tests/test_main_data"
 TEST_OUTPUT = f"{TEST_DATA_PATH}/output"
 
@@ -24,20 +24,20 @@ class TestIntegrationTestingMain(TestCase):
 
     def test_successful_scenario(self):
         execution = self.runner.invoke(
-            cli, ["-c", SUCCESS_CONFIGURATION_PATH, "-o", TEST_OUTPUT]
+            cli, [SUCCESS_CONFIGURATION_PATH, "-o", TEST_OUTPUT]
         )
         self.assertEqual(EXIT_SUCCESS, execution.exit_code)
 
     def test_unsuccessful_scenario(self):
         execution = self.runner.invoke(
-            cli, ["-c", FAILURE_CONFIGURATION_PATH, "-o", TEST_OUTPUT]
+            cli, [FAILURE_CONFIGURATION_PATH, "-o", TEST_OUTPUT]
         )
         self.assertIsInstance(execution.exception, SystemExit)
         self.assertEqual(EXIT_FAILURE, execution.exit_code)
 
     def test_mixed_diff_scenario(self):
         execution = self.runner.invoke(
-            cli, ["-c", MIXED_DIFF_CONFIGURATION_PATH, "-o", TEST_OUTPUT]
+            cli, [MIXED_DIFF_CONFIGURATION_PATH, "-o", TEST_OUTPUT]
         )
         self.assertIsInstance(execution.exception, SystemExit)
         self.assertEqual(EXIT_FAILURE, execution.exit_code)

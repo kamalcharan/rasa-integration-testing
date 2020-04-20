@@ -6,41 +6,26 @@ from unittest import TestCase
 
 from aiohttp import ClientSession
 
-from rasa_integration_testing.comparator import JsonPath
-from rasa_integration_testing.interaction import INTERACTION_TURN_EXTENSION
-from rasa_integration_testing.protocol import ProtocolException
-from rasa_integration_testing.runner import SENDER_ID_KEY, FailedInteraction, ScenarioRunner
-from rasa_integration_testing.scenario import Scenario
-from rasa_integration_testing.configuration import Configuration, DependencyInjector
+from integration_testing.comparator import JsonDataComparator, JsonPath
+from integration_testing.configuration import Configuration, DependencyInjector
+from integration_testing.interaction import (
+    INTERACTION_TURN_EXTENSION,
+    InteractionLoader,
+)
+from integration_testing.protocol import ProtocolException, protocol_selector
+from integration_testing.runner import SENDER_ID_KEY, FailedInteraction, ScenarioRunner
+from integration_testing.scenario import Scenario, ScenarioFragmentLoader
 
 YML_EXTENSION = "yml"
 INI_EXTENSION = "ini"
 
 TEST_DEFINITIONS_FOLDER = Path("tests/main_scenarios/")
-SUCCESS_CONFIGURATION_FILE = TEST_DEFINITIONS_FOLDER.joinpath(
-    f"success_config.{INI_EXTENSION}"
+SUCCESS_TESTS_PATH = TEST_DEFINITIONS_FOLDER.joinpath(f"success")
+FRAGMENTED_TESTS_PATH = TEST_DEFINITIONS_FOLDER.joinpath(f"fragmented")
+INTERACTION_TEMPLATES_TESTS_PATH = TEST_DEFINITIONS_FOLDER.joinpath(
+    f"interaction_templates"
 )
-FRAGMENTED_CONFIGURATION_FILE = TEST_DEFINITIONS_FOLDER.joinpath(
-    f"fragmented_config.{INI_EXTENSION}"
-)
-INTERACTION_TEMPLATES_CONFIGURATION_FILE = TEST_DEFINITIONS_FOLDER.joinpath(
-    f"interaction_templates_config.{INI_EXTENSION}"
-)
-FAILURE_CONFIGURATION_FILE = TEST_DEFINITIONS_FOLDER.joinpath(
-    f"failure_config.{INI_EXTENSION}"
-)
-SUCCESS_INJECTOR = DependencyInjector(
-    Configuration(open(SUCCESS_CONFIGURATION_FILE, "r"))
-)
-FRAGMENTED_INJECTOR = DependencyInjector(
-    Configuration(open(FRAGMENTED_CONFIGURATION_FILE, "r"))
-)
-INTERACTION_TEMPLATES_INJECTOR = DependencyInjector(
-    Configuration(open(INTERACTION_TEMPLATES_CONFIGURATION_FILE, "r"))
-)
-FAILURE_INJECTOR = DependencyInjector(
-    Configuration(open(FAILURE_CONFIGURATION_FILE, "r"))
-)
+FAILURE_TESTS_PATH = TEST_DEFINITIONS_FOLDER.joinpath(f"fail")
 
 SUCCESS_SCENARIO_PATH = TEST_DEFINITIONS_FOLDER.joinpath(
     f"success/scenarios/success.{YML_EXTENSION}"
@@ -68,21 +53,39 @@ class TestRunner(TestCase):
         self.maxDiff = None
 
     def test_identical(self):
-        runner = SUCCESS_INJECTOR.autowire(ScenarioRunner)
+        injector = _injector(SUCCESS_TESTS_PATH)
+        runner = ScenarioRunner(
+            injector.autowire(protocol_selector),
+            InteractionLoader(SUCCESS_TESTS_PATH),
+            ScenarioFragmentLoader(SUCCESS_TESTS_PATH),
+            injector.autowire(JsonDataComparator),
+        )
         result = self._sync_run(
             runner, Scenario.from_file("success", SUCCESS_SCENARIO_PATH)
         )
         self.assertEqual(result, None)
 
     def test_fragmented(self):
-        runner = FRAGMENTED_INJECTOR.autowire(ScenarioRunner)
+        injector = _injector(FRAGMENTED_TESTS_PATH)
+        runner = ScenarioRunner(
+            injector.autowire(protocol_selector),
+            InteractionLoader(FRAGMENTED_TESTS_PATH),
+            ScenarioFragmentLoader(FRAGMENTED_TESTS_PATH),
+            injector.autowire(JsonDataComparator),
+        )
         result = self._sync_run(
             runner, Scenario.from_file("fragmented", FRAGMENTED_SCENARIO_PATH)
         )
         self.assertEqual(result, None)
 
     def test_interaction_templates(self):
-        runner = INTERACTION_TEMPLATES_INJECTOR.autowire(ScenarioRunner)
+        injector = _injector(INTERACTION_TEMPLATES_TESTS_PATH)
+        runner = ScenarioRunner(
+            injector.autowire(protocol_selector),
+            InteractionLoader(INTERACTION_TEMPLATES_TESTS_PATH),
+            ScenarioFragmentLoader(INTERACTION_TEMPLATES_TESTS_PATH),
+            injector.autowire(JsonDataComparator),
+        )
         result = self._sync_run(
             runner,
             Scenario.from_file(
@@ -92,7 +95,13 @@ class TestRunner(TestCase):
         self.assertEqual(result, None)
 
     def test_not_identical(self):
-        runner = FAILURE_INJECTOR.autowire(ScenarioRunner)
+        injector = _injector(FAILURE_TESTS_PATH)
+        runner = ScenarioRunner(
+            injector.autowire(protocol_selector),
+            InteractionLoader(FAILURE_TESTS_PATH),
+            ScenarioFragmentLoader(FAILURE_TESTS_PATH),
+            injector.autowire(JsonDataComparator),
+        )
 
         result: Optional[FailedInteraction] = self._sync_run(
             runner, Scenario.from_file("failure", FAILURE_SCENARIO_PATH)
@@ -111,7 +120,13 @@ class TestRunner(TestCase):
 
     def test_protocol_exception(self):
         with self.assertRaises(ProtocolException):
-            runner = SUCCESS_INJECTOR.autowire(ScenarioRunner)
+            injector = _injector(SUCCESS_TESTS_PATH)
+            runner = ScenarioRunner(
+                injector.autowire(protocol_selector),
+                InteractionLoader(SUCCESS_TESTS_PATH),
+                ScenarioFragmentLoader(SUCCESS_TESTS_PATH),
+                injector.autowire(JsonDataComparator),
+            )
             self._sync_run(
                 runner, Scenario.from_file("success", SUCCESS_SCENARIO_PATH), True
             )
@@ -129,3 +144,7 @@ class TestRunner(TestCase):
 
 async def _create_client_session(fake_session: bool):
     return ClientSession() if not fake_session else None
+
+
+def _injector(tests_path: Path) -> DependencyInjector:
+    return DependencyInjector(Configuration(tests_path.joinpath("config.ini")))

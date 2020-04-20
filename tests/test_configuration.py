@@ -1,7 +1,12 @@
+from pathlib import Path
 from typing import Callable
 from unittest import TestCase
 
-from rasa_integration_testing.configuration import Configuration, DependencyInjector, configure
+from integration_testing.configuration import (
+    Configuration,
+    DependencyInjector,
+    configure,
+)
 
 
 @configure(extra="keyword")
@@ -51,7 +56,7 @@ class InvalidConfiguredObject:
         self.option = option
 
 
-INJECTOR = DependencyInjector(Configuration(open("tests/config.ini", "r")))
+INJECTOR = DependencyInjector(Configuration(Path("tests/config.ini")))
 
 
 class TestConfiguration(TestCase):

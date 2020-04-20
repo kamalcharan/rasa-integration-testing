@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from rasa_integration_testing.logging_provider import get_logger
+from integration_testing.logging_provider import get_logger
 
 LOGGER_NAME = "test_logging_provider"
 
@@ -28,7 +28,7 @@ class TestLoggingProvider(TestCase):
             )
 
     def test_invalid_log_format(self):
-        log_name = "rasa_integration_testing.logging_provider"
+        log_name = "integration_testing.logging_provider"
         level = "ERROR"
         error_message = "Unable to parse logging format \"Invalid {test}\". \
 Error: name 'test' is not defined."

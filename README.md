@@ -17,7 +17,7 @@ Each user/bot interaction content is located in a separate file. This allows reu
   bot: pay_bill/payment_type/collection
 ```
 
-In this case, the conversion would begin with a request with the content of the `interactions/user/initial_parameters/john_johnson.json.j2` file and the response would be compared to the content of the `interactions/bot/welcome.json.j2` file. The same process will be repeated for each interaction until they are all processed or an error occurs.
+In this case, the conversion would begin with a request with the content of the `interactions/user/initial_parameters/john_johnson.jinja` file and the response would be compared to the content of the `interactions/bot/welcome.jinja` file. The same process will be repeated for each interaction until they are all processed or an error occurs.
 
 ### Templates
 
@@ -62,11 +62,10 @@ Here is an example of how a scenario fragment can be defined and referred:
 
 ## Configuration
 
-The integration tests are configured using an `INI` file. Here is an example:
+The specified integration tests folder must contain a configuration file named `config.ini`. Here is an example:
 
 ```
 [runner]
-test_definitions_path = app/integration_tests/
 ignored_result_keys = noinputTimeout,speech.confidenceLevel,speech.maxSpeechTimeout
 
 [protocol]
@@ -78,7 +77,6 @@ url = http://localhost:5005/webhooks/ivr/interaction
 
 The `runner` section has the following properties:
 
-- `test_definitions_path`: The base directory where the scenarios and interaction definitions are located.
 - `ignored_result_keys`: A comma separated list of JSON paths representing keys to be ignored when comparing the expected and actual outputs.
 
 ### `protocol` section
@@ -94,6 +92,6 @@ The `protocol` section has the following properties:
 
 Integration tests can be executed using the following command:
 
-`python -m integration_testing ...`
+`python -m integration_testing TEST_FOLDER`
 
 The available options can be found using the `--help` option.

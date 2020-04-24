@@ -8,6 +8,7 @@ def quick_chunk(chunkable: Tuple[T, ...], chunk_size: int) -> Iterable[Tuple[T, 
     return zip_longest(*[iter(chunkable)] * chunk_size)
 
 
+# credits to Rasa, from rasa utils common
 def lazy_property(function: Callable) -> Any:
     """Allows to avoid recomputing a property over and over.
 

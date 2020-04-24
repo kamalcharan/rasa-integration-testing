@@ -1,18 +1,16 @@
 [tool.poetry]
-name = "rasa_integration_testing"
+name = "integration_testing"
 version = "0.1.0"
-description = ""
-authors = ["NuEcho <dev@nuecho.com>"]
+description = "A tool for end-to-end testing Rasa bots"
+authors = ["Nu Echo"]
 
 [tool.poetry.dependencies]
 aiohttp = "3.6.2"
 click = "7.1.1"
 coloredlogs = "14.0"
 jinja2 = "2.11.2"
-pydantic = "^1.4"
 python = "3.6.8"
 ruamel-yaml = "0.16.10"
-setuptools = "46.1.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "5.3.4"

@@ -6,15 +6,19 @@ from unittest import TestCase
 
 from aiohttp import ClientSession
 
-from integration_testing.comparator import JsonDataComparator, JsonPath
-from integration_testing.configuration import Configuration, DependencyInjector
-from integration_testing.interaction import (
+from rasa_integration_testing.comparator import JsonDataComparator, JsonPath
+from rasa_integration_testing.configuration import Configuration, DependencyInjector
+from rasa_integration_testing.interaction import (
     INTERACTION_TURN_EXTENSION,
     InteractionLoader,
 )
-from integration_testing.protocol import ProtocolException, protocol_selector
-from integration_testing.runner import SENDER_ID_KEY, FailedInteraction, ScenarioRunner
-from integration_testing.scenario import Scenario, ScenarioFragmentLoader
+from rasa_integration_testing.protocol import ProtocolException, protocol_selector
+from rasa_integration_testing.runner import (
+    SENDER_ID_KEY,
+    FailedInteraction,
+    ScenarioRunner,
+)
+from rasa_integration_testing.scenario import Scenario, ScenarioFragmentLoader
 
 YML_EXTENSION = "yml"
 INI_EXTENSION = "ini"

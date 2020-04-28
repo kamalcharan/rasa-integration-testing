@@ -4,8 +4,8 @@ from unittest import TestCase
 
 from click.testing import CliRunner
 
-from integration_testing.application import cli
-from integration_testing.cli import EXIT_FAILURE, EXIT_SUCCESS
+from rasa_integration_testing.application import cli
+from rasa_integration_testing.cli import EXIT_FAILURE, EXIT_SUCCESS
 
 SENDER_ID_PATTERN = r"\{<Key.SENDER: 'sender'>: '.*'\}"
 

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Callable
 from unittest import TestCase
 
-from integration_testing.configuration import (
+from rasa_integration_testing.configuration import (
     Configuration,
     DependencyInjector,
     configure,

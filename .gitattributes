@@ -14,8 +14,9 @@
 *.accentuated textfile
 *.c textfile
 *.cc textfile
-*.cfxml textfile
 *.checkstyle textfile
+*.cfg textfile
+*.cfxml textfile
 *.classpath textfile
 *.conf textfile
 *.cpp textfile

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from integration_testing.common import quick_chunk
+from rasa_integration_testing.common import quick_chunk
 
 
 class TestCommon(TestCase):

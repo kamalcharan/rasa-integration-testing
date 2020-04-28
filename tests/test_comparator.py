@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from integration_testing.comparator import JsonDataComparator, JsonDiff, JsonPath
+from rasa_integration_testing.comparator import JsonDataComparator, JsonDiff, JsonPath
 
 
 class TestComparator(TestCase):

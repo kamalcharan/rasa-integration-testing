@@ -1,8 +1,8 @@
 from pathlib import Path
 from unittest import TestCase
 
-from integration_testing.interaction import Interaction, InteractionTurn
-from integration_testing.scenario import (
+from rasa_integration_testing.interaction import Interaction, InteractionTurn
+from rasa_integration_testing.scenario import (
     Scenario,
     ScenarioFragmentReference,
     ScenarioParsingError,

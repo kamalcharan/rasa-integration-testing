@@ -2,7 +2,7 @@
 
 # include source code in any python subprocess
 export PYTHONPATH = .
-SOURCE_FOLDER=integration_testing
+SOURCE_FOLDER=rasa_integration_testing
 
 help:
 	@echo "    init"

@@ -3,7 +3,7 @@ from os import getpid
 from socket import gethostname
 from unittest import TestCase
 
-from integration_testing.helper import (
+from rasa_integration_testing.helper import (
     TRACKER_ID_SIGNATURE,
     generate_tracker_id_from_scenario_name,
 )

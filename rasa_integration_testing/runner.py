@@ -66,9 +66,15 @@ class ScenarioRunner:
         interactions: List[Interaction] = self._resolve_interactions(scenario)
 
         for step_id, interaction in enumerate(interactions, STARTING_STEP_ID):
+            substitutes = {
+                SENDER_ID_ENV_VARIABLE: sender_id,
+                STEP_ID_ENV_VARIABLE: step_id,
+            }
+            substitutes.update(os.environ)
+
             user_input = {SENDER_ID_KEY: sender_id}
             user_input.update(
-                self._interaction_loader.render_user_turn(interaction.user)
+                self._interaction_loader.render_user_turn(interaction.user, substitutes)
             )
 
             try:
@@ -81,14 +87,11 @@ class ScenarioRunner:
                     f'protocol error: "{error}"'
                 )
 
-            substitutes = {
-                SENDER_ID_ENV_VARIABLE: sender_id,
-                STEP_ID_ENV_VARIABLE: step_id,
-            }
-            substitutes.update(os.environ)
-            expected_output = self._interaction_loader.render_bot_turn(interaction.bot)
+            expected_output = self._interaction_loader.render_bot_turn(
+                interaction.bot, substitutes
+            )
             json_diff: JsonDiff = self._comparator.compare(
-                expected_output, actual_output, substitutes
+                expected_output, actual_output
             )
 
             if not json_diff.identical:

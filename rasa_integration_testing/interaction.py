@@ -72,14 +72,20 @@ class InteractionLoader:
             autoescape=select_autoescape(["json"]),
         )
 
-    def render_user_turn(self, user_turn: InteractionTurn) -> dict:
-        return self._render_turn(user_turn, USER_FOLDER)
+    def render_user_turn(
+        self, user_turn: InteractionTurn, env_variables: dict = {}
+    ) -> dict:
+        return self._render_turn(user_turn, USER_FOLDER, env_variables)
 
-    def render_bot_turn(self, bot_turn: InteractionTurn) -> dict:
-        return self._render_turn(bot_turn, BOT_FOLDER)
+    def render_bot_turn(
+        self, bot_turn: InteractionTurn, env_variables: dict = {}
+    ) -> dict:
+        return self._render_turn(bot_turn, BOT_FOLDER, env_variables)
 
-    def _render_turn(self, turn: InteractionTurn, folder: str) -> dict:
+    def _render_turn(
+        self, turn: InteractionTurn, folder: str, env_variables: dict = {}
+    ) -> dict:
         template_filename = f"{folder}/{turn.template}.{INTERACTION_TURN_EXTENSION}"
         template = self._template_environment.get_template(template_filename)
-        rendered_template: str = template.render(**turn.variables)
+        rendered_template: str = template.render(**turn.variables, **env_variables)
         return json.loads(rendered_template)

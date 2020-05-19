@@ -1,4 +1,3 @@
-from string import Template
 from typing import Any, Dict, List, Union
 
 from .common import lazy_property
@@ -61,28 +60,20 @@ class JsonDataComparator:
         if isinstance(node, dict):
             for key, value in node.items():
                 resolved_json_data.update(
-                    self.flatten_json(value, JsonPath(*json_path, key), variables)
+                    self.flatten_json(value, JsonPath(*json_path, key))
                 )
         elif isinstance(node, list):
             for index, entry in enumerate(node, 1):
                 entry_id = JsonPath(*json_path, f"{INDEX_KEY_PREFIX}{index}")
-                resolved_json_data.update(self.flatten_json(entry, entry_id, variables))
-        elif isinstance(node, str):
-            resolved_json_data[json_path] = Template(node).safe_substitute(variables)
+                resolved_json_data.update(self.flatten_json(entry, entry_id))
         else:
             resolved_json_data[json_path] = node
 
         return resolved_json_data
 
-    def compare(
-        self, expected_json_data: dict, actual_json_data: dict, variables: dict = {}
-    ) -> JsonDiff:
-        expected: Dict[JsonPath, Any] = self.flatten_json(
-            expected_json_data, variables=variables
-        )
-        actual: Dict[JsonPath, Any] = self.flatten_json(
-            actual_json_data, variables=variables
-        )
+    def compare(self, expected_json_data: dict, actual_json_data: dict) -> JsonDiff:
+        expected: Dict[JsonPath, Any] = self.flatten_json(expected_json_data)
+        actual: Dict[JsonPath, Any] = self.flatten_json(actual_json_data)
 
         missing_entries: Dict[JsonPath, Any] = _get_diff(expected, actual)
         extra_entries: Dict[JsonPath, Any] = _get_diff(actual, expected)

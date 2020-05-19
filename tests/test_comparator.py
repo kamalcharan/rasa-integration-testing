@@ -17,15 +17,6 @@ class TestComparator(TestCase):
         )
         self.assertTrue(result.identical)
 
-    def test_compare_identical_variable_substitute(self):
-        variable_value = "stitute"
-        result: JsonDiff = self.comparator.compare(
-            {"key": "${sub}"},
-            {"key": variable_value},
-            variables={"sub": variable_value},
-        )
-        self.assertTrue(result.identical)
-
     def test_compare_missing_key(self):
         result: JsonDiff = self.comparator.compare({"missing": [{"key": "value"}]}, {})
         self.assertFalse(result.identical)

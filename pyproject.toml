@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "rasa_integration_testing"
+name = "rasa-integration-testing"
 version = "0.1.3"
 description = "A tool for end-to-end testing Rasa bots"
 authors = ["Nu Echo"]

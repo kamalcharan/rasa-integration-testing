@@ -3,6 +3,7 @@
 # include source code in any python subprocess
 export PYTHONPATH = .
 SOURCE_FOLDER=rasa_integration_testing
+TEST_FOLDER=tests
 
 help:
 	@echo "    init"
@@ -23,18 +24,14 @@ install:
 	poetry install
 
 lint:
-	poetry run pylama
-	poetry run mypy .
-	poetry run black --check .
-	poetry run isort --check
+	poetry run pylama $(SOURCE_FOLDER) $(TEST_FOLDER)
+	poetry run mypy $(SOURCE_FOLDER) $(TEST_FOLDER)
+	poetry run black --check $(SOURCE_FOLDER) $(TEST_FOLDER)
+	poetry run isort --check -rc $(SOURCE_FOLDER) $(TEST_FOLDER)
 
 format:
-	poetry run black .
-	poetry run isort
+	poetry run black $(SOURCE_FOLDER) $(TEST_FOLDER)
+	poetry run isort -rc $(SOURCE_FOLDER) $(TEST_FOLDER)
 
 test:
-	poetry run py.test \
-		--cov-report term-missing:skip-covered \
-		--cov-report html \
-		--cov-fail-under=85 \
-		--cov "${SOURCE_FOLDER}"
+	poetry run py.test

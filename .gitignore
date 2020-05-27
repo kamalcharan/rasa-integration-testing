@@ -7,3 +7,4 @@
 __pycache__
 htmlcov
 app/models
+rasa_integration_testing.egg-info

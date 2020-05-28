@@ -36,3 +36,50 @@ class TestComparator(TestCase):
         path = JsonPath(key)
         self.assertEqual(result.missing_entries, {path: "value1"})
         self.assertEqual(result.extra_entries, {path: "value2"})
+
+    def test_ignore_null_in_expected(self):
+        value = "value"
+        key = "key"
+        path = JsonPath(key)
+
+        result: JsonDiff = self.comparator.compare({key: None}, {key: value})
+        self.assertTrue(result.identical)
+
+        result: JsonDiff = self.comparator.compare({key: None}, {})
+        self.assertTrue(result.identical)
+
+        result: JsonDiff = self.comparator.compare({key: None}, {key: None})
+        self.assertTrue(result.identical)
+
+        result: JsonDiff = self.comparator.compare({key: value}, {key: None})
+        self.assertFalse(result.identical)
+        self.assertEqual(result.missing_entries, {path: value})
+        self.assertEqual(result.extra_entries, {path: None})
+
+        result: JsonDiff = self.comparator.compare({}, {key: None})
+        self.assertFalse(result.identical)
+        self.assertEqual(result.missing_entries, {})
+        self.assertEqual(result.extra_entries, {path: None})
+
+    def test_ignore_null_in_expected_deep(self):
+        expected = {
+            "A": {"A": "value", "B": None, "C": None},
+        }
+
+        actual = {
+            "A": {"A": "value", "B": "value"},
+        }
+
+        result: JsonDiff = self.comparator.compare(expected, actual)
+        self.assertTrue(result.identical)
+
+    def test_ignore_null_only_on_leaf_keys(self):
+        expected = {"A": None}
+        actual = {"A": {"B": "value"}}
+        path = JsonPath("A", "B")
+
+        # We currently only support ignoring leaf keys
+        result: JsonDiff = self.comparator.compare(expected, actual)
+        self.assertFalse(result.identical)
+        self.assertEqual(result.missing_entries, {})
+        self.assertEqual(result.extra_entries, {path: "value"})

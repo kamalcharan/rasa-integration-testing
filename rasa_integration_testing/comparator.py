@@ -74,9 +74,10 @@ class JsonDataComparator:
     def compare(self, expected_json_data: dict, actual_json_data: dict) -> JsonDiff:
         expected: Dict[JsonPath, Any] = self.flatten_json(expected_json_data)
         actual: Dict[JsonPath, Any] = self.flatten_json(actual_json_data)
+        ignored_keys: List[JsonPath] = [k for k, v in expected.items() if v is None]
 
-        missing_entries: Dict[JsonPath, Any] = _get_diff(expected, actual)
-        extra_entries: Dict[JsonPath, Any] = _get_diff(actual, expected)
+        missing_entries: Dict[JsonPath, Any] = _get_diff(expected, actual, ignored_keys)
+        extra_entries: Dict[JsonPath, Any] = _get_diff(actual, expected, ignored_keys)
         return JsonDiff(missing_entries, extra_entries)
 
     def _check_if_ignored(self, json_path: JsonPath) -> bool:
@@ -87,10 +88,16 @@ class JsonDataComparator:
         return False
 
 
-def _get_diff(expected_dict: dict, actual_dict: dict) -> dict:
+def _get_diff(
+    expected_dict: Dict[JsonPath, Any],
+    actual_dict: Dict[JsonPath, Any],
+    ignored_keys: List[JsonPath],
+) -> Dict[JsonPath, Any]:
     diff: Dict[JsonPath, Any] = {}
 
     for key, value in expected_dict.items():
+        if key in ignored_keys:
+            continue
         if key not in actual_dict:
             diff[key] = value
         elif expected_dict[key] != actual_dict[key]:

@@ -6,5 +6,5 @@
 .vscode
 __pycache__
 htmlcov
-app/models
+dist
 rasa_integration_testing.egg-info

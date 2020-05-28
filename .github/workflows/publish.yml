@@ -1,0 +1,38 @@
+# This workflows will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+name: Build and publish to Pypi
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+    - name: Installing poetry
+      run: |
+        export $( \
+            PYTHONFAULTHANDLER=TRUE \
+            PYTHONUNBUFFERED=TRUE \
+            PIP_DISABLE_PIP_VERSION_CHECK=on \
+            PIP_NO_CACHE_DIR=off \
+        )
+        pip install --upgrade pip \
+        && pip install "poetry==1.0.5"
+    - name: Bump version to release tag
+      run: poetry version ${{ github.ref }}
+    - name: Push version to master
+      uses: mikeal/publish-to-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and publish
+      run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }} --build

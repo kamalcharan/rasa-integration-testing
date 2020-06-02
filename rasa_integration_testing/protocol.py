@@ -1,11 +1,11 @@
 import json
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 
 from aiohttp import ClientResponse, ClientSession, ContentTypeError
 
-from .configuration import configure
+from .common.configuration import configure
 
 
 class ProtocolException(Exception):
@@ -16,16 +16,8 @@ class Protocol(ABC):
     def __init__(self, url: str):
         self._url = url
 
-    async def _post(self, data: Any, session: ClientSession) -> dict:
-        response: ClientResponse = await session.post(self._url, data=data)
-        try:
-            return await response.json()
-        except ContentTypeError as error:
-            message = await response.text()
-            raise ProtocolException(f"{error}, server response received: {message}")
-
     @abstractmethod
-    async def send_input(self, input: Any, session: ClientSession) -> Any:
+    async def send_input(self, input: Any, session: Any) -> Any:
         pass
 
 
@@ -34,25 +26,17 @@ class RestChannelProtocol(Protocol):
         super().__init__(url)
 
     async def send_input(self, json_input: dict, session: ClientSession) -> dict:
-        response = await self._post(json.dumps(json_input), session)
-        return response
-
-
-class TestChannelProtocol(Protocol):
-    def __init__(self, url: str):
-        super().__init__(url)
-
-    async def send_input(
-        self, test_input: dict, session: Optional[ClientSession]
-    ) -> dict:
-        if session is None:
-            raise ProtocolException()
-        return test_input
+        data = json.dumps(json_input)
+        response: ClientResponse = await session.post(self._url, data=data)
+        try:
+            return await response.json()
+        except ContentTypeError as error:
+            message = await response.text()
+            raise ProtocolException(f"{error}, server response received: {message}")
 
 
 class ProtocolType(Enum):
-    VOICEXML = ("rest", RestChannelProtocol)
-    TEST = ("test", TestChannelProtocol)
+    REST = ("rest", RestChannelProtocol)
 
     def __init__(self, key: str, protocol_constructor: Callable):
         self.key = key

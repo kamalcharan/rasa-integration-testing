@@ -1,7 +1,17 @@
 from itertools import zip_longest
+from os import getpid
+from socket import gethostname
 from typing import Any, Callable, Iterable, Tuple, TypeVar
 
 T = TypeVar("T")
+TRACKER_ID_SIGNATURE = "ITEST"
+
+
+def generate_tracker_id_from_scenario_name(
+    run_timestamp: float, scenario_name: str
+) -> str:
+    unique_identifier = f"{gethostname()}{str(getpid())}_{run_timestamp}"
+    return f"{TRACKER_ID_SIGNATURE}_{unique_identifier}_{scenario_name}"
 
 
 def quick_chunk(chunkable: Tuple[T, ...], chunk_size: int) -> Iterable[Tuple[T, ...]]:

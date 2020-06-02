@@ -1,13 +1,14 @@
+import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Union
 
 from ruamel.yaml import YAML
 
+from .common.configuration import configure
 from .interaction import Interaction, InteractionTurn
-from .logging_provider import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 SCENARIO_FRAGMENTS_FOLDER = "scenario_fragments"
 SCENARIO_FRAGMENTS_GLOB = "*.yml"
@@ -70,11 +71,10 @@ class Scenario:
         return f"Scenario '{self.name}': steps={self.steps}"
 
 
+@configure("tests_path")
 class ScenarioFragmentLoader:
-    def __init__(self, test_definitions_path: Path):
-        self._scenario_fragments_path = test_definitions_path.joinpath(
-            SCENARIO_FRAGMENTS_FOLDER
-        )
+    def __init__(self, tests_path: Path):
+        self._scenario_fragments_path = tests_path / SCENARIO_FRAGMENTS_FOLDER
         self._scenario_fragments = self._load_scenario_fragments()
 
     def scenario_fragment(self, scenario_fragment_name: str) -> List[Interaction]:

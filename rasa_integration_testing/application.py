@@ -2,12 +2,12 @@ import asyncio
 import sys
 from itertools import chain
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, TextIO, Tuple
+from typing import Any, Callable, Iterable, List, Optional, TextIO, Tuple
 
 import click
 from aiohttp import ClientSession
 
-from .cli import (
+from .common.cli import (
     COLOR_ERROR,
     COLOR_SUCCESS,
     COLOR_WARNING,
@@ -15,16 +15,10 @@ from .cli import (
     EXIT_SUCCESS,
     echo,
 )
-from .common import quick_chunk
-from .comparator import JsonDataComparator
-from .configuration import Configuration, DependencyInjector
-from .interaction import InteractionLoader
-from .logging_provider import get_logger
-from .protocol import protocol_selector
+from .common.configuration import Configuration, DependencyInjector
+from .common.utils import quick_chunk
 from .runner import FailedInteraction, ScenarioRunner
-from .scenario import Scenario, ScenarioFragmentLoader, load_scenarios
-
-logger = get_logger(__name__)
+from .scenario import Scenario, load_scenarios
 
 SCENARIOS_FOLDER = "scenarios"
 SCENARIOS_GLOB = "*.yml"
@@ -32,48 +26,49 @@ DEFAULT_ASYNC_CHUNK_SIZE = 16
 
 RUNNER_CONFIG_SECTION = "runner"
 TEST_CONFIG_FILE = "config.ini"
+TESTS_PATH_ARGUMENT = "tests_path"
 
 
-@click.command()
-@click.argument("tests_path", type=click.Path(exists=True))
-@click.option(
-    "-k",
-    "--chunk-size",
-    type=click.INT,
-    default=DEFAULT_ASYNC_CHUNK_SIZE,
-    help="Size of asynchronous test chunks.",
-)
-@click.option("-o", "--output", type=click.File("w"), default=sys.stdout)
-@click.argument("scenarios_glob", required=False, default=SCENARIOS_GLOB)
-def cli(tests_path: str, chunk_size: int, output: TextIO, scenarios_glob: str):
-    folder_path = Path(tests_path)
-    configuration = Configuration(folder_path.joinpath(TEST_CONFIG_FILE))
-    injector = DependencyInjector(configuration)
-    scenarios_path = folder_path.joinpath(SCENARIOS_FOLDER)
-    scenarios: List[Scenario] = load_scenarios(scenarios_path, scenarios_glob)
-
-    runner: ScenarioRunner = ScenarioRunner(
-        injector.autowire(protocol_selector),
-        InteractionLoader(folder_path),
-        ScenarioFragmentLoader(folder_path),
-        injector.autowire(JsonDataComparator),
+def create_application(session_type: Any) -> Callable:
+    @click.command()
+    @click.argument(TESTS_PATH_ARGUMENT, type=click.Path(exists=True))
+    @click.option(
+        "-k",
+        "--chunk-size",
+        type=click.INT,
+        default=DEFAULT_ASYNC_CHUNK_SIZE,
+        help="Size of asynchronous test chunks.",
     )
+    @click.option("-o", "--output", type=click.File("w"), default=sys.stdout)
+    @click.argument("scenarios_glob", required=False, default=SCENARIOS_GLOB)
+    def cli(
+        tests_path: str, chunk_size: int, output: TextIO, scenarios_glob: str
+    ) -> int:
+        folder_path = Path(tests_path)
+        configuration = Configuration(folder_path / TEST_CONFIG_FILE)
+        injector = DependencyInjector(configuration, {TESTS_PATH_ARGUMENT: folder_path})
+        scenarios_path = folder_path / SCENARIOS_FOLDER
+        scenarios: List[Scenario] = load_scenarios(scenarios_path, scenarios_glob)
 
-    loop = asyncio.get_event_loop()
-    failed_interactions: List[FailedInteraction] = loop.run_until_complete(
-        _run_scenarios(runner, scenarios, chunk_size, output)
-    )
+        runner: ScenarioRunner = injector.autowire(ScenarioRunner)
 
-    if failed_interactions:
-        sys.exit(EXIT_FAILURE)
-    else:
-        sys.exit(EXIT_SUCCESS)
+        loop = asyncio.get_event_loop()
+        failed_interactions: List[FailedInteraction] = loop.run_until_complete(
+            _run_scenarios(runner, session_type, scenarios, chunk_size, output)
+        )
+        sys.exit(EXIT_FAILURE if failed_interactions else EXIT_SUCCESS)
+
+    return cli
 
 
 async def _run_scenarios(
-    runner: ScenarioRunner, scenarios: List[Scenario], chunk_size: int, output: TextIO
+    runner: ScenarioRunner,
+    session_type: Callable,
+    scenarios: List[Scenario],
+    chunk_size: int,
+    output: TextIO,
 ) -> List[FailedInteraction]:
-    async with ClientSession() as session:
+    async with session_type() as session:
         chunk_scenarios: Iterable[Tuple[Scenario, ...]] = quick_chunk(
             tuple(scenarios), chunk_size
         )

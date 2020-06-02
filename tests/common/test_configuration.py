@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Callable
 from unittest import TestCase
 
-from rasa_integration_testing.configuration import (
+from rasa_integration_testing.common.configuration import (
     Configuration,
     DependencyInjector,
     configure,
@@ -56,7 +56,7 @@ class InvalidConfiguredObject:
         self.option = option
 
 
-INJECTOR = DependencyInjector(Configuration(Path("tests/config.ini")))
+INJECTOR = DependencyInjector(Configuration(Path("tests/common/config.ini")))
 
 
 class TestConfiguration(TestCase):
@@ -78,8 +78,9 @@ class TestConfiguration(TestCase):
 
     def test_invalid_autowiring(self):
         self._assert_error(
-            "Invalid configure decorator option: invalid_option from"
-            " InvalidConfiguredObject configure tag. Use the format section.option",
+            "Invalid configure decorator option: invalid_option from "
+            "InvalidConfiguredObject configure tag. Use the format section.option "
+            "or variable name.",
             InvalidConfiguredObject,
         )
 

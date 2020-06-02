@@ -1,6 +1,7 @@
-import sys
+from aiohttp import ClientSession
+
+from .application import create_application
 
 if __name__ == "__main__":
-    from .application import cli
-
-    sys.exit(cli())
+    cli = create_application(ClientSession)
+    cli()

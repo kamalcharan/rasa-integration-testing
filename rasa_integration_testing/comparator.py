@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Union
 
-from .common import lazy_property
-from .configuration import configure
-from .identifier import Identifier
+from .common.configuration import configure
+from .common.identifier import Identifier
+from .common.utils import lazy_property
 
 IGNORED_KEYS_SEPARATOR = ","
 INDEX_KEY_PREFIX = "_"

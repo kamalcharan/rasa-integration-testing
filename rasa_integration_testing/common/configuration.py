@@ -68,9 +68,11 @@ class DependencyInjector:
     Keeps track of singleton configuration objects.
     """
 
-    def __init__(self, configuration: ConfigParser):
+    def __init__(self, configuration: ConfigParser, variables: Dict[Any, Any] = {}):
         self._configuration = configuration
         self._wired_objects: Dict[Configured, Any] = {}
+        self.variables = variables
+        self.variables.update(os.environ)
 
     def autowire(self, configured: Callable) -> T:
         """
@@ -136,17 +138,20 @@ class DependencyInjector:
     ) -> Union[str, bool, float, int]:
         capture = re.match(CONFIGURE_OPTIONS_PATTERN, option)
 
-        if not capture:
+        if capture:
+            section_option = (capture[SECTION_CAPTURE], capture[OPTION_CAPTURE])
+            if annotation is int:
+                return self._configuration.getint(*section_option)
+            if annotation is bool:
+                return self._configuration.getboolean(*section_option)
+            if annotation is float:
+                return self._configuration.getfloat(*section_option)
+            return self._configuration.get(*section_option)
+        elif option in self.variables:
+            return self.variables[option]
+        else:
             raise Exception(
                 f"Invalid configure decorator option: {option} from "
-                f"{constructor.__name__} configure tag. Use the format section.option"
+                f"{constructor.__name__} configure tag. Use the format section.option "
+                "or variable name."
             )
-
-        section_option = (capture[SECTION_CAPTURE], capture[OPTION_CAPTURE])
-        if annotation is int:
-            return self._configuration.getint(*section_option)
-        if annotation is bool:
-            return self._configuration.getboolean(*section_option)
-        if annotation is float:
-            return self._configuration.getfloat(*section_option)
-        return self._configuration.get(*section_option)

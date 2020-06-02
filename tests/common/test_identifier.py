@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from rasa_integration_testing.identifier import Identifier
+from rasa_integration_testing.common.identifier import Identifier
 
 ELEMENTS = ["en-US", "pay_bill", "initial"]
 

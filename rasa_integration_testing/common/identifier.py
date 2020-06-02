@@ -4,7 +4,7 @@ from typing import Iterable as TypeIterable
 from typing import Sequence as TypeSequence
 from typing import Union
 
-from .common import lazy_property
+from .utils import lazy_property
 
 
 class Identifier(Sequence):

@@ -3,6 +3,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from .common.configuration import configure
+
 INTERACTIONS_FOLDER = "interactions"
 INTERACTION_TURN_EXTENSION = "jinja"
 USER_FOLDER = "user"
@@ -64,9 +66,10 @@ class Interaction:
         return hash((self.user, self.bot))
 
 
+@configure("tests_path")
 class InteractionLoader:
-    def __init__(self, test_definitions_path: Path):
-        interactions_path = test_definitions_path.joinpath(INTERACTIONS_FOLDER)
+    def __init__(self, tests_path: Path):
+        interactions_path = tests_path / INTERACTIONS_FOLDER
         self._template_environment = Environment(
             loader=FileSystemLoader(str(interactions_path)),
             autoescape=select_autoescape(["json"]),

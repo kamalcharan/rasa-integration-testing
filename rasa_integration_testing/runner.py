@@ -4,23 +4,16 @@ from typing import Any, List, Optional
 
 from aiohttp import ClientSession
 
+from .common.configuration import configure
+from .common.utils import generate_tracker_id_from_scenario_name
 from .comparator import JsonDataComparator, JsonDiff
-from .helper import generate_tracker_id_from_scenario_name
 from .interaction import Interaction, InteractionLoader
-from .logging_provider import get_logger
-from .protocol import Protocol, ProtocolException
+from .protocol import Protocol, ProtocolException, protocol_selector
 from .scenario import Scenario, ScenarioFragmentLoader, ScenarioFragmentReference
 
-logger = get_logger(__name__)
-
 SENDER_ID_KEY = "sender"
-
 SENDER_ID_ENV_VARIABLE = "SENDER_ID"
-STEP_ID_ENV_VARIABLE = "STEP_ID"
-
 IGNORED_KEYS_SEPERATOR = ","
-
-STARTING_STEP_ID = 2
 
 
 class FailedInteraction:
@@ -45,6 +38,9 @@ class FailedInteraction:
         )
 
 
+@configure(
+    protocol_selector, InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
+)
 class ScenarioRunner:
     def __init__(
         self,
@@ -62,16 +58,13 @@ class ScenarioRunner:
         self, scenario: Scenario, session: ClientSession
     ) -> Optional[FailedInteraction]:
         sender_id = generate_tracker_id_from_scenario_name(time.time(), scenario.name)
-
         interactions: List[Interaction] = self._resolve_interactions(scenario)
 
-        for step_id, interaction in enumerate(interactions, STARTING_STEP_ID):
+        for interaction in interactions:
             substitutes = {
                 SENDER_ID_ENV_VARIABLE: sender_id,
-                STEP_ID_ENV_VARIABLE: step_id,
             }
             substitutes.update(os.environ)
-
             user_input = {SENDER_ID_KEY: sender_id}
             user_input.update(
                 self._interaction_loader.render_user_turn(interaction.user, substitutes)

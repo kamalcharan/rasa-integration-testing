@@ -53,7 +53,7 @@ class Scenario:
 
     @classmethod
     def from_file(cls, name: str, path: Path) -> "Scenario":
-        logger.info("Loading scenario from: {path}", path=path)
+        logger.info(f"Loading scenario from: {path}")
 
         with open(path) as scenario_file:
             yaml = YAML()

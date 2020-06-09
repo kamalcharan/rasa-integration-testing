@@ -71,7 +71,9 @@ class JsonDataComparator:
 
         return resolved_json_data
 
-    def compare(self, expected_json_data: dict, actual_json_data: dict) -> JsonDiff:
+    def compare(
+        self, expected_json_data: Union[dict, list], actual_json_data: Union[dict, list]
+    ) -> JsonDiff:
         expected: Dict[JsonPath, Any] = self.flatten_json(expected_json_data)
         actual: Dict[JsonPath, Any] = self.flatten_json(actual_json_data)
 

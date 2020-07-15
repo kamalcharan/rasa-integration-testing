@@ -1,9 +1,10 @@
 import json
 import os
+from json import JSONDecodeError
 from time import time
 from typing import List, Optional
 
-from aiohttp import ClientResponse, ClientSession, ContentTypeError
+from requests import Response, post
 
 from .common.configuration import configure
 from .common.utils import generate_tracker_id_from_scenario_name
@@ -23,52 +24,50 @@ class RestProtocolException(Exception):
 @configure(
     "protocol.url", InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
 )
-class RestScenarioRunner(ScenarioRunner):
-    async def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
-        async with ClientSession() as session:
-            sender_id = generate_tracker_id_from_scenario_name(time(), scenario.name)
-            interactions: List[Interaction] = self.resolve_interactions(scenario)
+class RestRunner(ScenarioRunner):
+    def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
+        sender_id = generate_tracker_id_from_scenario_name(time(), scenario.name)
+        interactions: List[Interaction] = self.resolve_interactions(scenario)
 
-            for interaction in interactions:
-                substitutes = {
-                    SENDER_ID_ENV_VARIABLE: sender_id,
-                }
-                substitutes.update(os.environ)
-                user_input = {SENDER_ID_KEY: sender_id}
-                user_input.update(
-                    self.interaction_loader.render_user_turn(
-                        interaction.user, substitutes
-                    )
+        for interaction in interactions:
+            substitutes = {
+                SENDER_ID_ENV_VARIABLE: sender_id,
+            }
+            substitutes.update(os.environ)
+            user_input = {SENDER_ID_KEY: sender_id}
+            user_input.update(
+                self.interaction_loader.render_user_turn(interaction.user, substitutes)
+            )
+
+            try:
+                actual_output: dict = self._send_input(user_input)
+            except RestProtocolException as error:
+                raise RestProtocolException(
+                    f'"{scenario}": failed sending user input "{user_input}", '
+                    f'protocol error: "{error}"'
                 )
 
-                try:
-                    actual_output: dict = await self._send_input(user_input, session)
-                except RestProtocolException as error:
-                    raise RestProtocolException(
-                        f'"{scenario}": failed sending user input "{user_input}", '
-                        f'protocol error: "{error}"'
-                    )
+            expected_output = self.interaction_loader.render_bot_turn(
+                interaction.bot, substitutes
+            )
+            json_diff: JsonDiff = self.comparator.compare(
+                expected_output, actual_output
+            )
 
-                expected_output = self.interaction_loader.render_bot_turn(
-                    interaction.bot, substitutes
+            if not json_diff.identical:
+                failed_interaction = FailedInteraction(
+                    user_input, expected_output, actual_output, json_diff
                 )
-                json_diff: JsonDiff = self.comparator.compare(
-                    expected_output, actual_output
-                )
+                return failed_interaction
 
-                if not json_diff.identical:
-                    failed_interaction = FailedInteraction(
-                        user_input, expected_output, actual_output, json_diff
-                    )
-                    return failed_interaction
+        return None
 
-            return None
-
-    async def _send_input(self, json_input: dict, session: ClientSession) -> dict:
+    def _send_input(self, json_input: dict) -> dict:
         data = json.dumps(json_input)
-        response: ClientResponse = await session.post(self.url, data=data)
+        response: Response = post(self.url, data=data)
         try:
-            return await response.json()
-        except ContentTypeError as error:
-            message = await response.text()
-            raise RestProtocolException(f"{error}, server response received: {message}")
+            return response.json()
+        except JSONDecodeError as error:
+            raise RestProtocolException(
+                f"{error}, server response received: {response.text}"
+            )

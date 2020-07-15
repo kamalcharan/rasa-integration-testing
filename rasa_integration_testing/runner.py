@@ -40,7 +40,7 @@ class ScenarioRunner:
         self.scenario_fragment_loader = scenario_fragment_loader
         self.comparator = comparator
 
-    async def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
+    def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
         raise NotImplementedError
 
     def resolve_interactions(self, scenario: Scenario) -> List[Interaction]:

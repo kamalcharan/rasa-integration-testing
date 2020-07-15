@@ -1,8 +1,8 @@
 import os
-from asyncio import Condition, TimeoutError, wait_for
+from threading import Condition
 from typing import Any, List, Optional, Tuple
 
-from socketio import AsyncClient, AsyncClientNamespace
+from socketio import Client, ClientNamespace
 
 from .common.configuration import configure
 from .comparator import JsonDataComparator
@@ -24,8 +24,8 @@ IS_BOT_MESSAGE = False
     "protocol.url", InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
 )
 class SocketIORunner(ScenarioRunner):
-    async def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
-        client: AsyncClient = AsyncClient()
+    def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
+        client: Client = Client()
 
         interactions: List[Interaction] = self.resolve_interactions(scenario)
         runner_namespace = SocketIORunnerClientNamespace(
@@ -36,14 +36,14 @@ class SocketIORunner(ScenarioRunner):
 
         # have to force polling or else python-socketio tries to close
         # non-existant websockets which produces warning logs.
-        await client.connect(self.url, transports="polling")
-        result = await runner_namespace.run()
-        await client.disconnect()
+        client.connect(self.url, transports="polling")
+        result = runner_namespace.run()
+        client.disconnect()
 
         return result
 
 
-class SocketIORunnerClientNamespace(AsyncClientNamespace):
+class SocketIORunnerClientNamespace(ClientNamespace):
     def __init__(
         self,
         socketio_runner: SocketIORunner,
@@ -59,16 +59,16 @@ class SocketIORunnerClientNamespace(AsyncClientNamespace):
         self._failed_interaction: Optional[FailedInteraction] = None
         self._current_user_input: dict = {}
 
-    async def session_request(self) -> None:
-        await self.emit("session_request")
+    def session_request(self) -> None:
+        self.emit("session_request")
 
-    async def on_bot_uttered(self, data: Any) -> None:
-        await self._timeout_notify()
+    def on_bot_uttered(self, data: Any) -> None:
+        self._timeout_notify()
 
         is_user_message, message = self._pop_interaction_stack()
 
         while is_user_message:
-            await self._send_user_input(message)
+            self._send_user_input(message)
             is_user_message, message = self._pop_interaction_stack()
 
         json_diff = self.socketio_runner.comparator.compare(message, data)
@@ -80,7 +80,7 @@ class SocketIORunnerClientNamespace(AsyncClientNamespace):
 
         if self._next_is_user_message():
             _, message = self._pop_interaction_stack()
-            await self._send_user_input(message)
+            self._send_user_input(message)
 
     def _next_is_user_message(self) -> bool:
         if len(self._interaction_stack) > 0:
@@ -102,40 +102,37 @@ class SocketIORunnerClientNamespace(AsyncClientNamespace):
             if not is_user_input
         ]
 
-    async def _timeout_notify(self):
-        async with self._timeout_condition:
+    def _timeout_notify(self):
+        with self._timeout_condition:
             self._timeout_condition.notify()
 
-    async def _timeout_await(self):
-        async with self._timeout_condition:
-            await self._timeout_condition.wait()
+    def _timeout_await(self) -> bool:
+        with self._timeout_condition:
+            return self._timeout_condition.wait(BOT_RESPONSE_TIMEOUT)
 
-    async def _send_user_input(self, message: dict) -> None:
-        await self._timeout_notify()
+    def _send_user_input(self, message: dict) -> None:
+        self._timeout_notify()
         self._current_user_input = {SESSION_ID_KEY: self.client.sid}
         self._current_user_input.update(message)
-        await self.emit(EVENT_USER_UTTERED, self._current_user_input)
+        self.emit(EVENT_USER_UTTERED, self._current_user_input)
 
-    async def run(self) -> Optional[FailedInteraction]:
-        await self.session_request()
+    def run(self) -> Optional[FailedInteraction]:
+        self.session_request()
 
         is_user_input, message = self._pop_interaction_stack()
         if is_user_input:
-            await self._send_user_input(message)
+            self._send_user_input(message)
 
-        try:
-            while self._failed_interaction is None:
-                await wait_for(
-                    self._timeout_await(), timeout=BOT_RESPONSE_TIMEOUT,
-                )
-        except TimeoutError:
-            remaining_messages = self._get_remaining_bot_messages()
-            json_diff = self.socketio_runner.comparator.compare({}, remaining_messages)
+        while self._failed_interaction is None and self._timeout_await():
+            pass
 
-            if not json_diff.identical and self._failed_interaction is None:
-                return FailedInteraction(
-                    self._current_user_input, {}, remaining_messages, json_diff,
-                )
+        remaining_messages = self._get_remaining_bot_messages()
+        json_diff = self.socketio_runner.comparator.compare({}, remaining_messages)
+
+        if not json_diff.identical and self._failed_interaction is None:
+            return FailedInteraction(
+                self._current_user_input, {}, remaining_messages, json_diff,
+            )
 
         return self._failed_interaction
 

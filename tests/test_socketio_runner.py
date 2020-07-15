@@ -1,10 +1,11 @@
 import asyncio
 from pathlib import Path
+from threading import Thread
 from typing import Any, List
 from unittest import TestCase
 
-from socketio import ASGIApp, AsyncServer
-from uvicorn import Config, Server
+from aiohttp import web
+from socketio import AsyncServer
 
 from rasa_integration_testing.common.configuration import (
     Configuration,
@@ -39,7 +40,19 @@ INITIAL_INVALID_DATA = (
 class TestRunner(TestCase):
     def setUp(self):
         self.maxDiff = None
-        sio = AsyncServer(async_mode="asgi")
+        self.runner = self.aiohttp_server()
+        Thread(target=self.run_server, args=(self.runner,), daemon=True).start()
+
+    def test_identical(self):
+        runner = _scenario_runner(SUCCESS_TESTS_PATH)
+        scenario = Scenario.from_file("success", SUCCESS_SCENARIO_PATH)
+        self.bot_messages_stack = _bot_message_stack(runner, scenario)
+
+        result = runner.run(scenario)
+        self.assertEqual(result, None)
+
+    def aiohttp_server(self):
+        sio = AsyncServer(async_mode="aiohttp")
 
         @sio.on(EVENT_USER_UTTERED)
         async def on_user_uttered(session_id: str, request: Any):
@@ -48,28 +61,18 @@ class TestRunner(TestCase):
                 for message in messages:
                     await sio.emit(EVENT_BOT_UTTERED, message, room=session_id)
 
-        app = ASGIApp(sio)
-        config = Config(app, host="localhost", port=8081)
-        server = Server(config=config)
-        config.setup_event_loop()
-        server_task = server.serve()
-        asyncio.ensure_future(server_task)
+        app = web.Application()
+        sio.attach(app)
+        runner = web.AppRunner(app)
+        return runner
 
-    def tearDown(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.run())
-
-    def test_identical(self):
-        runner = _scenario_runner(SUCCESS_TESTS_PATH)
-        scenario = Scenario.from_file("success", SUCCESS_SCENARIO_PATH)
-        self.bot_messages_stack = _bot_message_stack(runner, scenario)
-
-        async def run():
-            await asyncio.sleep(1)
-            result = await runner.run(scenario)
-            self.assertEqual(result, None)
-
-        self.run = run
+    def run_server(self, runner: web.AppRunner):
+        self.server_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.server_loop)
+        self.server_loop.run_until_complete(runner.setup())
+        self.site = web.TCPSite(runner, "localhost", 8080)
+        self.server_loop.create_task(self.site.start())
+        self.server_loop.run_forever()
 
 
 def _scenario_runner(tests_path: Path) -> SocketIORunner:

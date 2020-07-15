@@ -1,50 +1,56 @@
-import asyncio
+import logging
 import sys
+from concurrent.futures.thread import ThreadPoolExecutor
 from enum import Enum
-from itertools import chain
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, TextIO, Tuple
+from queue import Queue
+from threading import Thread
+from typing import Any, Callable, Dict, List, Optional
 
 import click
-import socketio
-from aiohttp import ClientSession
+import coloredlogs
 
-from .common.cli import (
-    COLOR_ERROR,
-    COLOR_SUCCESS,
-    COLOR_WARNING,
-    EXIT_FAILURE,
-    EXIT_SUCCESS,
-    echo,
-)
 from .common.configuration import Configuration, DependencyInjector, configure
-from .common.utils import quick_chunk
-from .rest_runner import RestScenarioRunner
+from .rest_runner import RestRunner
 from .runner import FailedInteraction, ScenarioRunner
 from .scenario import Scenario, load_scenarios
 from .socketio_runner import SocketIORunner
 
 SCENARIOS_FOLDER = "scenarios"
 SCENARIOS_GLOB = "*.yml"
-DEFAULT_ASYNC_CHUNK_SIZE = 8
+DEFAULT_MAX_WORKERS = 8
 
 RUNNER_CONFIG_SECTION = "runner"
 TEST_CONFIG_FILE = "config.ini"
 TESTS_PATH_ARGUMENT = "tests_path"
+
+EXIT_SUCCESS = 0
+EXIT_FAILURE = 1
+COLOR_SUCCESS = "green"
+COLOR_FAILURE = "red"
+COLOR_WARNING = "yellow"
+
+MESSAGE_KEY = "message"
+FOREGROUND_COLOR_KEY = "fg"
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
+coloredlogs.install(level="INFO", logger=logger)
+
+output_queue: Queue = Queue()
 
 
 @click.command()
 @click.argument(TESTS_PATH_ARGUMENT, type=click.Path(exists=True))
 @click.option(
     "-k",
-    "--chunk-size",
+    "--max-workers",
     type=click.INT,
-    default=DEFAULT_ASYNC_CHUNK_SIZE,
-    help="Size of asynchronous test chunks.",
+    default=DEFAULT_MAX_WORKERS,
+    help="Amount of simultaenous workers.",
 )
-@click.option("-o", "--output", type=click.File("w"), default=sys.stdout)
 @click.argument("scenarios_glob", required=False, default=SCENARIOS_GLOB)
-def cli(tests_path: str, chunk_size: int, output: TextIO, scenarios_glob: str) -> None:
+def cli(tests_path: str, max_workers: int, scenarios_glob: str) -> None:
     folder_path = Path(tests_path)
     configuration = Configuration(folder_path / TEST_CONFIG_FILE)
     injector = DependencyInjector(configuration, {TESTS_PATH_ARGUMENT: folder_path})
@@ -54,94 +60,111 @@ def cli(tests_path: str, chunk_size: int, output: TextIO, scenarios_glob: str) -
     runner_type: Callable[..., ScenarioRunner] = injector.autowire(runner_selector)
     runner: ScenarioRunner = injector.autowire(runner_type)
 
-    loop = asyncio.get_event_loop()
-    failed_interactions: List[FailedInteraction] = loop.run_until_complete(
-        _run_scenarios(runner, scenarios, chunk_size, output)
+    output_thread = Thread(target=write_queue_output, daemon=True)
+    output_thread.start()
+
+    failed_interactions: List[FailedInteraction] = _run_scenarios(
+        runner, scenarios, max_workers
     )
+
+    output_queue.join()
+    if failed_interactions:
+        click.secho("Tests failed!", fg=COLOR_FAILURE)
+    else:
+        click.secho("Tests ran successfully.", fg=COLOR_SUCCESS)
+
     sys.exit(EXIT_FAILURE if failed_interactions else EXIT_SUCCESS)
 
 
-@configure("protocol.type")
-def _get_session_type(protocol_type: str) -> Any:
-    return socketio.AsyncClient if protocol_type == "socketio" else ClientSession
+def write_queue_output():
+    while True:
+        click.secho(**output_queue.get())
+        output_queue.task_done()
 
 
-async def _run_scenarios(
-    runner: ScenarioRunner, scenarios: List[Scenario], chunk_size: int, output: TextIO,
+def _run_scenarios(
+    runner: ScenarioRunner, scenarios: List[Scenario], max_workers: int
 ) -> List[FailedInteraction]:
-    chunk_scenarios: Iterable[Tuple[Scenario, ...]] = quick_chunk(
-        tuple(scenarios), chunk_size
-    )
-    async_results: List[List[FailedInteraction]] = [
-        await _run_scenario_chunk(chunk, runner, output) for chunk in chunk_scenarios
-    ]
-
-    return list(chain.from_iterable(async_results))
-
-
-async def _run_scenario_chunk(
-    chunked_scenarios: Tuple[Scenario, ...], runner: ScenarioRunner, output: TextIO,
-) -> List[FailedInteraction]:
-    async_results = await asyncio.gather(
-        *[
-            _run_scenario(runner, scenario, output)
-            for scenario in chunked_scenarios
-            if scenario is not None
+    with ThreadPoolExecutor(max_workers) as executor:
+        return [
+            result
+            for result in executor.map(
+                _run_interaction, [runner] * len(scenarios), scenarios
+            )
+            if result is not None
         ]
-    )
-    return [result for result in async_results if result is not None]
 
 
-async def _run_scenario(
-    runner: ScenarioRunner, scenario: Scenario, output: TextIO,
+def _run_interaction(
+    runner: ScenarioRunner, scenario: Scenario
 ) -> Optional[FailedInteraction]:
-    echo(f"Running scenario '{scenario.name}'...", COLOR_WARNING, output)
-    result: Optional[FailedInteraction] = await runner.run(scenario)
+    output_queue.put(
+        {
+            MESSAGE_KEY: f"Running scenario '{scenario.name}'...",
+            FOREGROUND_COLOR_KEY: COLOR_WARNING,
+        }
+    )
+    result: Optional[FailedInteraction] = runner.run(scenario)
 
     if result is None:
-        echo(f"+++ Successfully ran scenario '{scenario.name}'!", COLOR_SUCCESS, output)
-    else:
-        echo(
-            f"--- Scenario '{scenario.name}' failed the following interaction.",
-            COLOR_ERROR,
-            output,
+        output_queue.put(
+            {
+                MESSAGE_KEY: f"+++ Successfully ran scenario '{scenario.name}'!",
+                FOREGROUND_COLOR_KEY: COLOR_SUCCESS,
+            }
         )
-        _print_failed_interaction(result, output)
+    else:
+        output_queue.put(
+            {
+                MESSAGE_KEY: f"--- Scenario '{scenario.name}' failed the following interaction.",
+                FOREGROUND_COLOR_KEY: COLOR_FAILURE,
+            }
+        )
+        _print_failed_interaction(result)
 
     return result
 
 
-def _print_failed_interaction(
-    failed_interaction: FailedInteraction, output: TextIO
-) -> None:
-    echo("User sent:", COLOR_WARNING, output=output)
-    echo(f"{failed_interaction.user_input}", output=output)
-    echo("Expected output:", COLOR_WARNING, output)
-    echo(f"{failed_interaction.expected_output}", output=output)
-    echo("Actual output:", COLOR_WARNING, output)
-    echo(f"{failed_interaction.actual_output}", output=output)
-    echo("Bot output was different than expected:", COLOR_WARNING, output)
+def _print_failed_interaction(failed_interaction: FailedInteraction) -> None:
+    output_queue.put({MESSAGE_KEY: "User sent:"})
+    output_queue.put({MESSAGE_KEY: f"{failed_interaction.user_input}"})
+    output_queue.put(
+        {MESSAGE_KEY: "Expected output:", FOREGROUND_COLOR_KEY: COLOR_WARNING}
+    )
+    output_queue.put({MESSAGE_KEY: f"{failed_interaction.expected_output}"})
+    output_queue.put(
+        {MESSAGE_KEY: "Actual output:", FOREGROUND_COLOR_KEY: COLOR_WARNING}
+    )
+    output_queue.put({MESSAGE_KEY: f"{failed_interaction.actual_output}"})
+    output_queue.put(
+        {
+            MESSAGE_KEY: "Bot output was different than expected:",
+            FOREGROUND_COLOR_KEY: COLOR_WARNING,
+        }
+    )
 
     if failed_interaction.output_diff.missing_entries:
         for key, value in failed_interaction.output_diff.missing_entries.items():
-            echo(f" - {key}: {value}", COLOR_ERROR, output)
+            output_queue.put(
+                {MESSAGE_KEY: f" - {key}: {value}", FOREGROUND_COLOR_KEY: COLOR_FAILURE}
+            )
             if key in failed_interaction.output_diff.extra_entries:
                 extra_value = failed_interaction.output_diff.extra_entries.pop(key)
-                _output_extra_value(key, extra_value, output)
+                _output_extra_value(key, extra_value)
 
     if failed_interaction.output_diff.extra_entries:
         for key, value in failed_interaction.output_diff.extra_entries.items():
-            _output_extra_value(key, value, output)
+            _output_extra_value(key, value)
 
-    echo("---", COLOR_ERROR, output)
+    output_queue.put({MESSAGE_KEY: "---", FOREGROUND_COLOR_KEY: COLOR_FAILURE})
 
 
-def _output_extra_value(key: Any, value: Any, output: TextIO) -> None:
-    echo(f" + {key}: {value}", COLOR_SUCCESS, output)
+def _output_extra_value(key: Any, value: Any) -> str:
+    return f" + {key}: {value}"
 
 
 class RunnerType(Enum):
-    REST = ("rest", RestScenarioRunner)
+    REST = ("rest", RestRunner)
     SOCKETIO = ("socketio", SocketIORunner)
 
     def __init__(self, key: str, runner_constructor: Callable):

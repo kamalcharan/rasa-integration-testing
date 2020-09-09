@@ -90,5 +90,8 @@ class InteractionLoader:
     ) -> dict:
         template_filename = f"{folder}/{turn.template}.{INTERACTION_TURN_EXTENSION}"
         template = self._template_environment.get_template(template_filename)
-        rendered_template: str = template.render(**turn.variables, **env_variables)
+
+        variables = {**turn.variables, **env_variables}
+        rendered_template: str = template.render({"vars": variables})
+
         return json.loads(rendered_template)

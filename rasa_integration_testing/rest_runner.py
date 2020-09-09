@@ -13,30 +13,39 @@ from .interaction import Interaction, InteractionLoader
 from .runner import FailedInteraction, ScenarioRunner
 from .scenario import Scenario, ScenarioFragmentLoader
 
-SENDER_ID_KEY = "sender"
+SENDER_KEY = "sender"
+SENDER_ID_KEY = "senderId"
 SENDER_ID_ENV_VARIABLE = "SENDER_ID"
+STEP_ID_ENV_VARIABLE = "STEP_ID"
 
 
 class RestProtocolException(Exception):
     pass
 
 
-@configure(
-    "protocol.url", InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
-)
-class RestRunner(ScenarioRunner):
+class AbstractRestRunner(ScenarioRunner):
+    def senderKey(self):
+        pass
+
+    def createVars(self, i):
+        return {}
+
     def run(self, scenario: Scenario) -> Optional[FailedInteraction]:
         sender_id = generate_tracker_id_from_scenario_name(time(), scenario.name)
         interactions: List[Interaction] = self.resolve_interactions(scenario)
 
+        i = 1
         for interaction in interactions:
-            substitutes = {
-                SENDER_ID_ENV_VARIABLE: sender_id,
-            }
-            substitutes.update(os.environ)
-            user_input = {SENDER_ID_KEY: sender_id}
+            i += 1
+            vars = self.createVars(i)
+            vars.update({SENDER_ID_ENV_VARIABLE: sender_id})
+
+            vars.update(os.environ)
+
+            user_input = {self.senderKey(): sender_id}
+
             user_input.update(
-                self.interaction_loader.render_user_turn(interaction.user, substitutes)
+                self.interaction_loader.render_user_turn(interaction.user, vars)
             )
 
             try:
@@ -48,8 +57,9 @@ class RestRunner(ScenarioRunner):
                 )
 
             expected_output = self.interaction_loader.render_bot_turn(
-                interaction.bot, substitutes
+                interaction.bot, vars
             )
+
             json_diff: JsonDiff = self.comparator.compare(
                 expected_output, actual_output
             )
@@ -66,8 +76,31 @@ class RestRunner(ScenarioRunner):
         data = json.dumps(json_input)
         response: Response = post(self.url, data=data)
         try:
-            return response.json()
+            status_code = response.status_code
+            if status_code == 200:
+                return response.json()
+            else:
+                return {"status": status_code, "error": response.text}
         except JSONDecodeError as error:
             raise RestProtocolException(
                 f"{error}, server response received: {response.text}"
             )
+
+
+@configure(
+    "protocol.url", InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
+)
+class RestRunner(AbstractRestRunner):
+    def senderKey(self):
+        return SENDER_KEY
+
+
+@configure(
+    "protocol.url", InteractionLoader, ScenarioFragmentLoader, JsonDataComparator
+)
+class IvrRunner(AbstractRestRunner):
+    def senderKey(self):
+        return SENDER_ID_KEY
+
+    def createVars(self, i):
+        return {STEP_ID_ENV_VARIABLE: str(i)}

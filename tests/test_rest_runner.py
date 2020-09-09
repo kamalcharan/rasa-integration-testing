@@ -12,7 +12,7 @@ from rasa_integration_testing.common.configuration import (
 from rasa_integration_testing.comparator import JsonPath
 from rasa_integration_testing.interaction import INTERACTION_TURN_EXTENSION
 from rasa_integration_testing.rest_runner import (
-    SENDER_ID_KEY,
+    SENDER_KEY,
     RestProtocolException,
     RestRunner,
 )
@@ -71,7 +71,7 @@ class TestRunner(TestCase):
                     "interaction_templates", INTERACTION_TEMPLATES_SCENARIO_PATH
                 )
             )
-            self.assertEqual(result, None)
+            self.assertEqual(result, None, "\ndetails:" + str(result))
 
     def test_not_identical(self):
         with HTTMock(request_response):
@@ -89,7 +89,7 @@ class TestRunner(TestCase):
                 {JsonPath("messages", "_1", "synthesis"): "Welcome to NuBank!"},
             )
             actual_output = result.actual_output
-            actual_output.pop(SENDER_ID_KEY)
+            actual_output.pop(SENDER_KEY)
             self.assertEqual({}, actual_output)
 
 

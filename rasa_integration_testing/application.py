@@ -11,7 +11,7 @@ import click
 import coloredlogs
 
 from .common.configuration import Configuration, DependencyInjector, configure
-from .rest_runner import RestRunner
+from .rest_runner import IvrRunner, RestRunner
 from .runner import FailedInteraction, ScenarioRunner
 from .scenario import Scenario, load_scenarios
 from .socketio_runner import SocketIORunner
@@ -165,6 +165,7 @@ def _output_extra_value(key: Any, value: Any) -> str:
 
 class RunnerType(Enum):
     REST = ("rest", RestRunner)
+    IVR = ("ivr", IvrRunner)
     SOCKETIO = ("socketio", SocketIORunner)
 
     def __init__(self, key: str, runner_constructor: Callable):

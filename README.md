@@ -94,4 +94,14 @@ Integration tests can be executed using the following command:
 
 `python -m rasa_integration_testing TEST_FOLDER`
 
+or
+
+`poetry run python -m rasa_integration_testing TEST_FOLDER`
+
+If you want to run only a subset of integration tests, this can be achieved with the optional argument `SCENARIOS_GLOB`:
+
+`python -m rasa_integration_testing TEST_FOLDER folder1/folder2/*.yml`
+
+Please note that the path of the second argument starts under the `scenarios` folder, and that you MUST point to one or multiple `yml` files.
+
 The available options can be found using the `--help` option.

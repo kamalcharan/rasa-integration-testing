@@ -11,6 +11,8 @@ CONFIGS_PATH = "tests/main_scenarios"
 SUCCESS_CONFIGURATION_PATH = f"{CONFIGS_PATH}/success"
 FAILURE_CONFIGURATION_PATH = f"{CONFIGS_PATH}/fail"
 MIXED_DIFF_CONFIGURATION_PATH = f"{CONFIGS_PATH}/mixed_diff"
+SUBSET_DIRECTORY = "subset"
+NONEXISTENT_SUBSET_DIRECTORY = "foo"
 
 
 class TestRunner(TestCase):
@@ -24,6 +26,20 @@ class TestRunner(TestCase):
         with HTTMock(request_response):
             execution = self.runner.invoke(cli, [SUCCESS_CONFIGURATION_PATH])
             self.assertEqual(EXIT_SUCCESS, execution.exit_code)
+
+    def test_successful_subdirectory(self):
+        with HTTMock(request_response):
+            execution = self.runner.invoke(
+                cli, [SUCCESS_CONFIGURATION_PATH, SUBSET_DIRECTORY]
+            )
+            self.assertEqual(EXIT_SUCCESS, execution.exit_code)
+
+    def test_missing_subdirectory(self):
+        with HTTMock(request_response):
+            execution = self.runner.invoke(
+                cli, [SUCCESS_CONFIGURATION_PATH, NONEXISTENT_SUBSET_DIRECTORY]
+            )
+            self.assertEqual(EXIT_FAILURE, execution.exit_code)
 
     def test_unsuccessful_scenario(self):
         with HTTMock(request_response):

@@ -1,0 +1,6 @@
+- user: initial_valid
+  bot: welcome
+- user: sub_interaction
+  bot: sub_folder/sub
+- user: sub_folder/deeper_interaction
+  bot: sub_folder/deeper_folder/deep

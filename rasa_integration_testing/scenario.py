@@ -20,6 +20,8 @@ BOT_KEY = "bot"
 TEMPLATE_KEY = "template"
 VARIABLES_KEY = "variables"
 
+CATCH_ALL_PATTERN = "/**/*.*"
+
 
 class ScenarioParsingError(Exception):
     def __init__(self, message: str, path: Path):
@@ -78,6 +80,12 @@ class ScenarioFragmentLoader:
         self._scenario_fragments = self._load_scenario_fragments()
 
     def scenario_fragment(self, scenario_fragment_name: str) -> List[Interaction]:
+        if not scenario_fragment_name in self._scenario_fragments.keys():
+            raise Exception(
+                f"Missing {scenario_fragment_name} scenario among "
+                f"{self._scenario_fragments.keys()}"
+            )
+
         return self._scenario_fragments[scenario_fragment_name]
 
     def _load_scenario_fragments(self) -> Dict[str, List[Interaction]]:
@@ -104,6 +112,9 @@ class ScenarioFragmentLoader:
 
 
 def load_scenarios(scenarios_path: Path, scenarios_glob: str) -> List[Scenario]:
+    if scenarios_path.joinpath(scenarios_glob).is_dir():
+        scenarios_glob += CATCH_ALL_PATTERN
+
     return [
         Scenario.from_file(_scenario_name(scenario_file, scenarios_path), scenario_file)
         for scenario_file in list(scenarios_path.rglob(scenarios_glob))

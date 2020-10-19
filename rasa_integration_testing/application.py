@@ -69,11 +69,11 @@ def cli(tests_path: str, max_workers: int, scenarios_glob: str) -> None:
 
     output_queue.join()
     if failed_interactions:
-        click.secho("Tests failed!", fg=COLOR_FAILURE)
+        click.secho(f"{len(failed_interactions)} tests failed!", fg=COLOR_FAILURE)
     else:
-        click.secho("Tests ran successfully.", fg=COLOR_SUCCESS)
+        click.secho(f"{len(scenarios)} tests ran successfully.", fg=COLOR_SUCCESS)
 
-    sys.exit(EXIT_FAILURE if failed_interactions else EXIT_SUCCESS)
+    sys.exit(EXIT_FAILURE if failed_interactions or not scenarios else EXIT_SUCCESS)
 
 
 def write_queue_output():

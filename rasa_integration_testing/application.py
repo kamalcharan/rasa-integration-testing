@@ -5,7 +5,7 @@ from enum import Enum
 from pathlib import Path
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import click
 import coloredlogs
@@ -28,6 +28,7 @@ EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 COLOR_SUCCESS = "green"
 COLOR_FAILURE = "red"
+COLOR_EXTRA = "cyan"
 COLOR_WARNING = "yellow"
 
 MESSAGE_KEY = "message"
@@ -145,22 +146,22 @@ def _print_failed_interaction(failed_interaction: FailedInteraction) -> None:
 
     if failed_interaction.output_diff.missing_entries:
         for key, value in failed_interaction.output_diff.missing_entries.items():
-            output_queue.put(
-                {MESSAGE_KEY: f" - {key}: {value}", FOREGROUND_COLOR_KEY: COLOR_FAILURE}
-            )
+            output_queue.put(_format_message(f" - {key}: {value}"))
             if key in failed_interaction.output_diff.extra_entries:
                 extra_value = failed_interaction.output_diff.extra_entries.pop(key)
-                _output_extra_value(key, extra_value)
+                output_queue.put(
+                    _format_message(f" + {key}: {extra_value}", COLOR_EXTRA)
+                )
 
     if failed_interaction.output_diff.extra_entries:
         for key, value in failed_interaction.output_diff.extra_entries.items():
-            _output_extra_value(key, value)
+            output_queue.put(_format_message(f" + {key}: {value}", COLOR_EXTRA))
 
-    output_queue.put({MESSAGE_KEY: "---", FOREGROUND_COLOR_KEY: COLOR_FAILURE})
+    output_queue.put(_format_message("---"))
 
 
-def _output_extra_value(key: Any, value: Any) -> str:
-    return f" + {key}: {value}"
+def _format_message(message: str, color: str = None) -> Dict:
+    return {MESSAGE_KEY: message, FOREGROUND_COLOR_KEY: color or COLOR_FAILURE}
 
 
 class RunnerType(Enum):
